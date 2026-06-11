@@ -935,26 +935,77 @@ function getStatus(c,p){
 //  STATE
 // ══════════════════════════════════════════════════════════
 let state={credits:[]};
+function nextQDate(d){
+  // Returns next quincenal date (8 or 23) after given date
+  const day=d.getDate();
+  if(day<8)return new Date(d.getFullYear(),d.getMonth(),8);
+  if(day<23)return new Date(d.getFullYear(),d.getMonth(),23);
+  return new Date(d.getFullYear(),d.getMonth()+1,8);
+}
+
+function createDefaultCredits(){
+  const tasaAnual=0.20, tasaQ=tasaAnual/24;
+
+  function build(nombre, montoOrig, plazoOrigPagos, extra60k, color){
+    const origPago=montoOrig*tasaQ/(1-Math.pow(1+tasaQ,-plazoOrigPagos));
+    const schedule=[];
+    let saldo=montoOrig, intAcum=0;
+
+    // ── Pago 1 (8 Jun 2026) – YA PAGADO con monto original ──
+    const i1=saldo*tasaQ, c1=origPago-i1, sf1=saldo-c1;
+    intAcum+=i1;
+    schedule.push({num:1,fecha:new Date('2026-06-08'),saldoInicial:saldo,pagoTotal:origPago,interes:i1,capital:c1,saldoFinal:sf1,pctPagado:c1/montoOrig,interesAcum:intAcum,paid:true,nota:'Pago 1 – monto original',extraAbono:0,moraDias:0,moraInteres:0});
+    saldo=sf1;
+
+    // ── Pago 2 (23 Jun 2026) – YA PAGADO con monto original ──
+    const i2=saldo*tasaQ, c2=origPago-i2, sf2=saldo-c2;
+    intAcum+=i2;
+    schedule.push({num:2,fecha:new Date('2026-06-23'),saldoInicial:saldo,pagoTotal:origPago,interes:i2,capital:c2,saldoFinal:sf2,pctPagado:(c1+c2)/montoOrig,interesAcum:intAcum,paid:true,nota:'Pago 2 – monto original. Se incorporaron $60,000 al saldo.',extraAbono:0,moraDias:0,moraInteres:0});
+
+    // ── Saldo nuevo = después de 2 pagos + $60k ──
+    saldo=sf2+extra60k;
+    const nuevoMonto=saldo;
+    const nuevoPago=5000;
+    let num=3;
+    let fecha=new Date('2026-07-08');
+
+    while(saldo>0.01&&num<600){
+      const int=saldo*tasaQ;
+      let cap=nuevoPago-int, pago=nuevoPago, sf=saldo-cap;
+      if(sf<=0||cap>=saldo){cap=saldo;pago=cap+int;sf=0;}
+      intAcum+=int;
+      schedule.push({num,fecha:new Date(fecha),saldoInicial:saldo,pagoTotal:pago,interes:int,capital:cap,saldoFinal:Math.max(0,sf),pctPagado:1-(Math.max(0,sf)/nuevoMonto),interesAcum:intAcum,paid:false,nota:'',extraAbono:0,moraDias:0,moraInteres:0});
+      saldo=Math.max(0,sf);
+      if(saldo<0.01)break;
+      num++;
+      // Alterna 8 y 23
+      if(fecha.getDate()===8)fecha=new Date(fecha.getFullYear(),fecha.getMonth(),23);
+      else fecha=new Date(fecha.getFullYear(),fecha.getMonth()+1,8);
+    }
+
+    const anos=Math.round((schedule.length-2)/24);
+    return{id:mkId(),nombre,monto:montoOrig+extra60k,tasa:tasaAnual,anos:Math.max(anos,1),fecha:'2026-06-08',frecuencia:'quincenal',color,gracia:3,schedule,pagoFijo:nuevoPago,totalPagos:schedule.length};
+  }
+
+  return[
+    build('Crédito Manuel',398940.44,240,60000,'#2563eb'),
+    build('Crédito Juan',458358.81,360,60000,'#7c3aed')
+  ];
+}
+
 function loadState(){
   try{
     const s=localStorage.getItem('fungiterra_v3');
     if(s){
       const parsed=JSON.parse(s);
-      // Restore Date objects
       parsed.credits.forEach(c=>{c.schedule.forEach(p=>{p.fecha=new Date(p.fecha);});});
       state=parsed;
     } else {
-      state.credits=[
-        buildCredit('Crédito Manuel',398940.44,0.20,10,new Date('2026-06-01'),'quincenal','#2563eb',3),
-        buildCredit('Crédito Juan',458358.8148,0.20,15,new Date('2026-06-01'),'quincenal','#7c3aed',3)
-      ];
+      state.credits=createDefaultCredits();
       saveState();
     }
   }catch(e){
-    state.credits=[
-      buildCredit('Crédito Manuel',398940.44,0.20,10,new Date('2026-06-01'),'quincenal','#2563eb',3),
-      buildCredit('Crédito Juan',458358.8148,0.20,15,new Date('2026-06-01'),'quincenal','#7c3aed',3)
-    ];
+    state.credits=createDefaultCredits();
   }
 }
 function saveState(){localStorage.setItem('fungiterra_v3',JSON.stringify(state));}
