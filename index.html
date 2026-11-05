@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1f6f43">
+<link rel="manifest" href="manifest.json">
+<title>Fungiterra Préstamos</title>
+<style>
+:root{--bg:#f5f4ef;--card:#fff;--tx:#1d2420;--tx2:#5e6a63;--ln:#e2e2d9;--ac:#1f6f43;--acs:#e4f1e8;--warn:#a85b00;--warns:#fbeedb;--bad:#b3322a;--bads:#fae6e4}
+@media (prefers-color-scheme:dark){:root{--bg:#141815;--card:#1d231f;--tx:#eef1ee;--tx2:#a2aea7;--ln:#303832;--ac:#6fcf97;--acs:#20362a;--warn:#f0b56a;--warns:#3a2c19;--bad:#f09a93;--bads:#3b2120}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:24px 0 8px}small,.m{color:var(--tx2);font-size:13px}
+.total{background:var(--ac);color:#fff;border-radius:14px;padding:18px}@media (prefers-color-scheme:dark){.total{color:#10231a}}
+.total b{display:block;font-size:34px;line-height:1.15;font-variant-numeric:tabular-nums}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px}
+.dos b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.lista{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+button{font:inherit;color:inherit;cursor:pointer}.cr{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px}.cr:hover{border-color:var(--ac)}
+.fila{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.sal{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--ln);border-radius:9px;margin:9px 0;overflow:hidden}.bar i{display:block;height:100%;background:var(--ac)}
+.b{display:inline-block;padding:1px 8px;border-radius:9px;font-size:12px;background:var(--ln);white-space:nowrap}.ok{background:var(--acs);color:var(--ac)}.w{background:var(--warns);color:var(--warn)}.r{background:var(--bads);color:var(--bad)}
+.alert{background:var(--warns);color:var(--warn);border-radius:10px;padding:10px 12px;margin-top:10px}
+.tw{overflow-x:auto;border:1px solid var(--ln);border-radius:12px;background:var(--card)}table{border-collapse:collapse;width:100%;min-width:620px;font-variant-numeric:tabular-nums}th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--ln);font-size:13px;white-space:nowrap}th{color:var(--tx2);font-weight:600}td:first-child,th:first-child,td.l,th.l{text-align:left}tr.pas td{color:var(--tx2)}
+.link{background:none;border:0;color:var(--ac);padding:0;font-weight:600}.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:600}.btn2{background:none;border:1px solid var(--ln);border-radius:8px;padding:6px 10px;font-size:13px}
+input{font:inherit;padding:8px 10px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--tx);max-width:160px}label{display:block;margin:8px 0}label span{display:block;font-size:13px;color:var(--tx2);margin-bottom:3px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.kv b{display:block}.kv div{font-size:13px;color:var(--tx2)}.kv b{color:var(--tx);font-size:15px}
+#login{max-width:340px;margin:12vh auto}@media (max-width:420px){.total b{font-size:28px}.dos b{font-size:18px}}
+</style>
+</head>
+<body><main id="app"><p class="m">Cargando…</p></main>
+<script>
+const API='https://fungiterra-api-production.up.railway.app',TK='ft_admin_token';
+const $=document.getElementById('app');let D=null;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $$=n=>n==null?'—':'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fec=f=>{if(!f)return '—';const[a,m,d]=f.split('-');return d+'/'+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][m-1]+'/'+a};
+function token(){try{return localStorage.getItem(TK)}catch(e){return null}}
+async function api(u,o={}){o.headers=Object.assign({'Content-Type':'application/json'},o.headers,{'x-session-token':token()||''});const r=await fetch(API+u,o);if(r.status===401||r.status===403){login(r.status===403?'Esta sesión no es de Admin.':'');throw new Error('sesion')}const j=await r.json();if(!j.ok)throw new Error(j.error||'Error');return j}
+function login(msg){$.innerHTML=`<form id="login" class="c"><h1>Préstamos</h1><p class="m">Entra con la contraseña de Admin.</p><label><span>Contraseña</span><input id="pw" type="password" autocomplete="current-password" style="max-width:100%;width:100%"></label><p class="m" id="er">${esc(msg||'')}</p><button class="btn">Entrar</button></form>`;
+document.getElementById('login').onsubmit=async e=>{e.preventDefault();const r=await fetch(API+'/auth/verificar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode:document.getElementById('pw').value})});const j=await r.json().catch(()=>({}));if(j.ok&&j.token){try{localStorage.setItem(TK,j.token)}catch(x){}cargar()}else document.getElementById('er').textContent=j.error||'No se pudo entrar'}}
+async function cargar(){if(!token())return login();try{D=await api('/api/prestamos');inicio()}catch(e){if(e.message!=='sesion')$.innerHTML=`<p class="alert">No se pudo cargar: ${esc(e.message)}</p>`}}
+function inicio(){const R=D.resumen,J=D.juan;const pend=D.prestamos.reduce((a,p)=>a+p.por_confirmar+p.por_revisar,0);
+$.innerHTML=`<header><h1>Préstamos</h1><small>v1.2</small></header>
+<section class="total"><span>Total que se debe</span><b>${$$(R.total)}</b></section>
+<section class="dos"><div class="c"><small>Empresa</small><b>${$$(R.empresa)}</b></div><button class="c" style="text-align:left" onclick="juan()"><small>Juan</small><b>${$$(R.juan)}</b><small>${J.termina?'Termina en '+J.anios_restantes+' años':'Sin fecha de término'}</small></button></section>
+${pend?`<p class="alert">${pend} recibo${pend>1?'s':''} sin confirmar en Wallet. El saldo no baja hasta que Gastos o el cotejo lo liguen.</p>`:''}
+<h2>Créditos</h2><div class="lista">${D.prestamos.map(p=>{const pct=p.recibos_total?Math.round(p.recibos_pagados/p.recibos_total*100):0;
+return `<button class="cr" onclick="ficha(${p.id})"><div class="fila"><strong>${esc(p.nombre)}</strong>${p.dato_estado==='estimado'?'<span class="b w">Estimado</span>':'<span class="b ok">Confirmado</span>'}</div><div class="sal">${$$(p.saldo)}</div>${p.recibos_total?`<div class="bar"><i style="width:${pct}%"></i></div><small>${p.recibos_pagados} de ${p.recibos_total} recibos</small>`:'<small>Sin calendario todavía</small>'}<br><small>${p.proximo?'Próximo: '+fec(p.proximo.fecha)+' · '+$$(p.proximo.pago):esc(p.frecuencia||'')}</small>${p.parte_juan?`<br><small>De Juan: ${$$(p.parte_juan)}</small>`:''}</button>`}).join('')}</div>`}
+const ESTADO={confirmado:['Confirmado','ok'],programado:['Programado',''],capitaliza:['Interés sumado',''],revisar:['Por revisar','r']};
+async function ficha(id){const p=D.prestamos.find(x=>x.id===id);$.innerHTML='<p class="m">Cargando…</p>';const{recibos:rs}=await api('/api/prestamos/'+id+'/recibos');
+const sigIdx=rs.findIndex(r=>r.estado==='programado'&&r.pago>0);
+$.innerHTML=`<header><button class="link" onclick="inicio()">← Préstamos</button><small>v1.2</small></header><h1>${esc(p.nombre)}</h1><div class="sal" style="margin:6px 0 12px">${$$(p.saldo)}</div>
+<div class="c kv"><div>Pedido<b>${$$(p.monto_original)}</b></div><div>Tasa anual<b>${p.tasa_anual==null?'—':p.tasa_anual+'%'+(p.lleva_iva?' + IVA':'')}</b></div><div>Pagos<b>${esc(p.frecuencia)}</b></div><div>Cuenta<b>${esc(p.cuenta_cargo)}</b></div><div>Contratado<b>${fec(p.fecha_contratacion)}</b></div><div>Termina<b>${fec(p.ultimo)}</b></div>${p.parte_juan?`<div>Parte de Juan<b>${$$(p.parte_juan)}</b></div>`:''}</div>
+<p class="m">${esc(p.notas)}</p>
+${sigIdx>=0&&p.tasa_anual?`<h2>Simulador de abono extra</h2><div class="c"><label><span>Abono extra por pago</span><input id="ex" type="number" min="0" step="500" value="1000"></label><p id="sim"></p></div>`:''}
+${!rs.length?`<h2>Saldo</h2><div class="c"><label><span>Saldo actual</span><input id="sm" type="number" min="0" step="100" value="${p.saldo}"></label><button class="btn2" id="smg">Guardar saldo</button></div>`:''}
+<h2>Liquidación</h2><div class="c">${p.fecha_liquidacion?`<p>Liquidado el ${fec(p.fecha_liquidacion)}.</p><button class="btn2" id="liqx">Quitar liquidación</button>`:`<label><span>Si la empresa lo liquida, fecha</span><input id="liqf" type="date"></label><button class="btn2" id="liq">Marcar como liquidado</button>${p.parte_juan?'<p class="m">Desde esa fecha, la parte de Juan baja a 20%.</p>':''}`}</div>
+${rs.length?`<h2>Calendario</h2><div class="tw"><table><thead><tr><th>#</th><th class="l">Fecha</th><th>Pago</th><th>Capital</th><th>Interés</th><th>IVA y comisión</th><th>Saldo</th><th class="l">Estado</th><th class="l">Wallet</th></tr></thead><tbody>${rs.map(r=>{const e=r.vencido?['Por confirmar','w']:(ESTADO[r.estado]||[r.estado,'']);return `<tr class="${r.estado==='confirmado'?'pas':''}"><td>${r.num}</td><td class="l">${fec(r.fecha)}</td><td>${$$(r.monto_real||r.pago)}</td><td>${$$(r.capital)}</td><td>${$$(r.interes)}</td><td>${$$(r.iva+r.comision)}</td><td>${$$(r.saldo_final)}</td><td class="l"><span class="b ${e[1]}">${e[0]}</span></td><td class="l">${r.wallet_record_id?'Ligado':r.fuente==='banco'?'Solo banco':'—'}</td></tr>`}).join('')}</tbody></table></div>`:''}`;
+const smg=document.getElementById('smg');if(smg)smg.onclick=async()=>{await api('/api/prestamos/'+id+'/saldo',{method:'PATCH',body:JSON.stringify({saldo_manual:+document.getElementById('sm').value})});D=await api('/api/prestamos');ficha(id)};
+const lq=async f=>{await api('/api/prestamos/'+id+'/liquidar',{method:'PATCH',body:JSON.stringify({fecha:f})});D=await api('/api/prestamos');ficha(id)};const bl=document.getElementById('liq'),bx=document.getElementById('liqx');if(bl)bl.onclick=()=>{const v=document.getElementById('liqf').value;if(v)lq(v)};if(bx)bx.onclick=()=>lq(null);
+if(sigIdx>=0&&p.tasa_anual){const r=rs[sigIdx],s0=rs[sigIdx-1]?rs[sigIdx-1].saldo_final:p.monto_original,i=(r.interes+r.iva)/s0,base=r.pago-r.comision,ex=document.getElementById('ex');const calc=()=>{const x=Math.max(0,+ex.value||0);const cor=e=>{let s=s0,n=0,t=0;while(s>0.01&&n<2000){const c=s*i;t+=c;s-=base+e-c;n++}return[n,t]};const[a,ia]=cor(0),[b,ib]=cor(x);document.getElementById('sim').textContent=x?`Terminarías ${a-b} pagos antes y ahorrarías ${$$(ia-ib)} de intereses e IVA (cálculo aproximado).`:'Escribe un abono.'};ex.oninput=calc;calc()}}
+function juan(){const J=D.juan;$.innerHTML=`<header><button class="link" onclick="inicio()">← Préstamos</button><small>v1.2</small></header><h1>Cuenta de Juan</h1><div class="sal" style="margin:6px 0 12px">${$$(J.saldo)}</div>
+<div class="c kv"><div>Sueldo pactado<b>${$$(J.sueldo_pactado)}</b></div><div>Descuento por quincena<b>${$$(J.descuento_quincenal)}</b></div><div>Interés por quincena<b>${$$(J.interes_quincena)}</b></div><div>Termina<b>${J.termina?fec(J.termina)+' ('+J.anios_restantes+' años)':'No alcanza con este descuento'}</b></div></div>
+<h2>Ajustes</h2><div class="c"><label><span>Descuento por quincena</span><input id="d" type="number" min="0" step="100" value="${J.descuento_quincenal}"></label><label style="display:flex;gap:8px;align-items:center"><input id="ci" type="checkbox" ${J.cobra_interes?'checked':''}> Cobrar intereses: tasa del banco, y 20% desde que la empresa liquide</label><button class="btn" id="g">Guardar</button></div>
+<h2>De dónde viene</h2><div class="c">${J.creditos.map(c=>`<div class="fila"><span>${esc(c.nombre)}${c.liquidado?' · 20%':''}</span><b>${$$(c.parte)}</b></div>`).join('')}</div>
+<h2>Descuentos</h2><div class="tw"><table style="min-width:420px"><thead><tr><th>Quincena</th><th>Pagado</th><th>Descuento</th><th class="l">Estado</th></tr></thead><tbody>${J.descuentos.map(d=>`<tr><td>${fec(d.quincena)}</td><td>${$$(d.sueldo_pagado)}</td><td>${$$(d.descuento)}</td><td class="l"><span class="b ${d.estado==='confirmado'?'ok':'w'}">${d.estado==='confirmado'?'Confirmado':'Estimado'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="l">Sin descuentos todavía</td></tr>'}</tbody></table></div>`;
+document.getElementById('g').onclick=async()=>{await api('/api/prestamos/juan',{method:'PATCH',body:JSON.stringify({descuento_quincenal:+document.getElementById('d').value,cobra_interes:document.getElementById('ci').checked})});D=await api('/api/prestamos');juan()}}
+try{if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js')}catch(e){}
+cargar();
+</script></body></html>
